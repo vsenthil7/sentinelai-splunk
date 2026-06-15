@@ -138,6 +138,28 @@ async def get_principal(
     return principal
 
 
+async def get_tenant_orchestrator(
+    principal: Principal = Depends(get_principal),
+    session: AsyncSession = Depends(db_session),
+) -> Orchestrator:
+    """Build an orchestrator using the caller tenant's resolved backends.
+
+    In managed mode (default) this is the shared mock/env-configured client; in
+    BYO mode it constructs clients from the tenant's own encrypted credentials.
+    Falls back to the managed singletons so a tenant with no creds row still works.
+    """
+    from app.services.credentials import (
+        CredentialRepository,
+        resolve_ai_model,
+        resolve_splunk_client,
+    )
+
+    row = await CredentialRepository(session).get_row(principal.tenant_id)
+    splunk = resolve_splunk_client(row, _splunk)
+    model = resolve_ai_model(row, _model)
+    return Orchestrator(splunk, model)
+
+
 def require(permission: Permission) -> Callable[[Principal], Awaitable[Principal]]:
     """Dependency factory enforcing a permission on the request principal."""
 

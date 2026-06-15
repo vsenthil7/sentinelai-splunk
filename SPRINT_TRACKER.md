@@ -64,16 +64,19 @@ platform tenant `__platform__` + provider user. 187 BE tests / 98% cov (provider
 routes fully covered incl. all 403 isolation paths), ruff + mypy clean.
 Provider login: tenant `__platform__`, user `provider`, password `provider-demo`.
 
-### SP7 — Per-tenant credentials + BYO-API / key management ⬜
-`TenantCredentialRow` (encrypted at rest via Fernet/`SENTINEL_SECRET_KEY`): per-tenant
-Splunk host/token, MCP URL/token, model backend + key. New settings API
-(`GET/PUT /tenant/settings`, `PUT /tenant/credentials`) — tenant admin only,
-write-only secrets (never returned in clear). **Credential resolver**: factory picks
-per-tenant creds at request time, falling back to provider-managed shared creds when
-the tenant opts into "use SentinelAI's Splunk" (managed mode). UI: Settings page with
-"Bring your own" vs "Use managed" toggle.
-*DoD:* two tenants can target different Splunk backends in the same running server;
-secrets never leak in API responses or logs; resolver tested for both modes.
+### SP7 — Per-tenant credentials + BYO-API / key management ✅
+`TenantCredentialRow` with secrets **encrypted at rest** (Fernet via
+`app/core/crypto.py`, key from `SENTINEL_SECRET_KEY`). `CredentialRepository`
+(upsert with None=unchanged / ""=clear semantics) + `CredentialView` (secrets
+exposed only as `*_set` booleans, never values). Resolver `resolve_splunk_client`
+/ `resolve_ai_model` picks managed (shared) vs BYO (tenant's own decrypted creds)
+per request; `get_tenant_orchestrator` makes it load-bearing so two tenants can
+target different Splunk/MCP/model backends in one running server. API:
+GET/PUT `/tenant/settings`, GET/PUT `/tenant/credentials` (admin-only,
+secrets write-only, audited without leaking values). Migration `c2d3e4f5a6b7`
+(upgrade+downgrade verified). Caught+fixed a real def-time NameError
+(`get_tenant_orchestrator` referencing `get_principal` before definition).
+207 BE tests / 98% cov, ruff + mypy clean. cryptography added to deps.
 
 ### SP8 — Usage metering + cost engine ⬜
 `UsageEventRow` (tenant_id, kind: search|model_call|action|tokens, quantity, cost_cents,

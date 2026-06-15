@@ -159,7 +159,7 @@ async def search(
 @router.post("/detections/run", response_model=list[Detection], tags=["agents"])
 async def run_detections(
     principal: Principal = Depends(deps.require(Permission.DETECTION_RUN)),
-    orch: Orchestrator = Depends(deps.get_orchestrator),
+    orch: Orchestrator = Depends(deps.get_tenant_orchestrator),
 ) -> list[Detection]:
     return await orch.run_detections()
 
@@ -167,7 +167,7 @@ async def run_detections(
 @router.post("/investigations/run", response_model=InvestigationList, tags=["agents"])
 async def run_investigations(
     principal: Principal = Depends(deps.require(Permission.INVESTIGATION_RUN)),
-    orch: Orchestrator = Depends(deps.get_orchestrator),
+    orch: Orchestrator = Depends(deps.get_tenant_orchestrator),
     repo: InvestigationRepository = Depends(deps.get_investigation_repo),
     incident_repo: IncidentRepository = Depends(deps.get_incident_repo),
     audit: AuditService = Depends(deps.get_audit),

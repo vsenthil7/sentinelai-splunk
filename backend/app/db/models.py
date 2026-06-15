@@ -140,6 +140,37 @@ class AuditLogRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class TenantCredentialRow(Base):
+    """Per-tenant integration credentials. Secret fields are encrypted at rest.
+
+    ``mode`` selects how the tenant's Splunk/model backends are sourced:
+      - ``managed``  : use the platform's shared credentials (env-configured).
+      - ``byo``      : use the tenant's own credentials stored here (encrypted).
+    Secret columns hold Fernet tokens, never plaintext, and are never returned
+    by the API (write-only).
+    """
+
+    __tablename__ = "tenant_credentials"
+
+    tenant_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("tenants.id"), primary_key=True
+    )
+    mode: Mapped[str] = mapped_column(String(20), default="managed")
+    # Splunk backend selection for this tenant: mock | live | mcp (when byo).
+    splunk_backend: Mapped[str] = mapped_column(String(10), default="mock")
+    splunk_host: Mapped[str] = mapped_column(String(300), default="")
+    splunk_token_enc: Mapped[str] = mapped_column(Text, default="")
+    splunk_mcp_url: Mapped[str] = mapped_column(String(300), default="")
+    splunk_mcp_token_enc: Mapped[str] = mapped_column(Text, default="")
+    # AI/model backend for this tenant: mock | live (when byo).
+    ai_backend: Mapped[str] = mapped_column(String(10), default="mock")
+    ai_model: Mapped[str] = mapped_column(String(120), default="")
+    ai_token_enc: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
+
+
 class RevokedTokenRow(Base):
     """Denylist of revoked JWT IDs (jti). Supports server-side logout.
 

@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-prod"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
+    # Symmetric key for encrypting per-tenant credentials at rest (Fernet-derived).
+    # In prod, source from a KMS/Key Vault and rotate. Defaults to jwt_secret-like.
+    secret_key: str = "change-me-secret-key-in-prod"
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./sentinel.db"

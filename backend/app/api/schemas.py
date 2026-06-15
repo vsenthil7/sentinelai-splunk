@@ -171,3 +171,44 @@ class ImpersonateResponse(BaseModel):
     tenant: str
     role: str
     impersonated_user: str
+
+
+# ---- Tenant self-service settings + BYO credentials (tenant ADMIN) ----
+
+
+class CredentialView(BaseModel):
+    """Non-secret view. Secrets shown only as *_set booleans, never values."""
+
+    mode: str
+    splunk_backend: str
+    splunk_host: str
+    splunk_token_set: bool
+    splunk_mcp_url: str
+    splunk_mcp_token_set: bool
+    ai_backend: str
+    ai_model: str
+    ai_token_set: bool
+
+
+class UpdateCredentialsRequest(BaseModel):
+    # None = leave unchanged; "" = clear. Secrets are write-only.
+    mode: str | None = None  # managed | byo
+    splunk_backend: str | None = None  # mock | live | mcp
+    splunk_host: str | None = None
+    splunk_token: str | None = None
+    splunk_mcp_url: str | None = None
+    splunk_mcp_token: str | None = None
+    ai_backend: str | None = None  # mock | live
+    ai_model: str | None = None
+    ai_token: str | None = None
+
+
+class TenantSettingsResponse(BaseModel):
+    tenant: str
+    plan: str
+    status: str
+    settings: dict[str, object]
+
+
+class UpdateSettingsRequest(BaseModel):
+    settings: dict[str, object]
