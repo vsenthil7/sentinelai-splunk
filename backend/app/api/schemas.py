@@ -127,3 +127,47 @@ class MitreCoverageResponse(BaseModel):
     coverage: dict[str, int]  # tactic -> number of enabled rules
     total_rules: int
     enabled_rules: int
+
+
+# ---- Provider plane (cross-tenant, PROVIDER_ADMIN only) ----
+
+
+class TenantResponse(BaseModel):
+    id: str
+    name: str
+    status: str
+    plan: str
+    user_count: int
+    created_at: datetime
+
+
+class CreateTenantRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    plan: str = "pro"
+    status: str = "active"
+    admin_username: str = Field(min_length=1, max_length=150)
+    admin_password: str = Field(min_length=8, max_length=200)
+
+
+class TenantStatusRequest(BaseModel):
+    status: str  # active | suspended | trial
+
+
+class TenantPlanRequest(BaseModel):
+    plan: str  # free | pro | enterprise
+
+
+class ProviderUserResponse(BaseModel):
+    id: str
+    username: str
+    role: str
+    tenant_id: str
+    tenant_name: str
+
+
+class ImpersonateResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    tenant: str
+    role: str
+    impersonated_user: str

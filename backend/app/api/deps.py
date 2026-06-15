@@ -150,3 +150,18 @@ def require(permission: Permission) -> Callable[[Principal], Awaitable[Principal
         return principal
 
     return _checker
+
+
+async def require_provider(principal: Principal = Depends(get_principal)) -> Principal:
+    """Gate for the cross-tenant provider plane.
+
+    Requires the PROVIDER scope, which only PROVIDER_ADMIN holds. Tenant admins
+    explicitly do NOT inherit this (see rbac.has_permission), so the provider
+    plane is unreachable by tenant-scoped roles.
+    """
+    if not principal.can(Permission.PROVIDER):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Provider administration requires the provider_admin role",
+        )
+    return principal

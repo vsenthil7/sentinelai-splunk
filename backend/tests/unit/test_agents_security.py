@@ -50,6 +50,29 @@ class TestSecurity:
             decode_access_token("garbage")
 
 
+class TestRBACProviderScope:
+    def test_tenant_admin_lacks_provider(self):
+        from app.core.rbac import Permission, has_permission
+
+        # Tenant admin has every tenant-scoped permission...
+        assert has_permission("admin", Permission.AUDIT_READ) is True
+        assert has_permission("admin", Permission.ADMIN) is True
+        # ...but NOT the cross-tenant provider scope.
+        assert has_permission("admin", Permission.PROVIDER) is False
+
+    def test_provider_admin_has_provider_only(self):
+        from app.core.rbac import Permission, has_permission
+
+        assert has_permission("provider_admin", Permission.PROVIDER) is True
+        # Provider admin is not a tenant member; no tenant-scoped grants.
+        assert has_permission("provider_admin", Permission.INVESTIGATION_READ) is False
+
+    def test_unknown_role_has_nothing(self):
+        from app.core.rbac import Permission, has_permission
+
+        assert has_permission("wizard", Permission.INVESTIGATION_READ) is False
+
+
 class TestDetectionAgent:
     async def test_runs_rules(self):
         agent = DetectionAgent(MockSplunkClient())

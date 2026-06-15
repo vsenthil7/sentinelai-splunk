@@ -91,6 +91,30 @@ async def auth(client) -> dict[str, str]:
 
 
 @pytest_asyncio.fixture
+async def provider_auth(client, sessionmaker_) -> dict[str, str]:
+    """Seed the platform tenant + provider_admin and return its auth header."""
+    from app.db.bootstrap import (
+        PLATFORM_TENANT,
+        PROVIDER_PASSWORD,
+        PROVIDER_USER,
+    )
+
+    async with sessionmaker_() as s:
+        platform = await TenantRepository(s).ensure(PLATFORM_TENANT)
+        users = UserRepository(s)
+        if await users.get_by_username(platform.id, PROVIDER_USER) is None:
+            await users.create(
+                platform.id, PROVIDER_USER, PROVIDER_PASSWORD, role="provider_admin"
+            )
+        await s.commit()
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={"username": PROVIDER_USER, "password": PROVIDER_PASSWORD, "tenant": PLATFORM_TENANT},
+    )
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+@pytest_asyncio.fixture
 async def make_user(client, sessionmaker_, seeded):
     """Factory: create a user with a role and return its auth header + id."""
 

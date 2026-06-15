@@ -8,6 +8,7 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.admin_routes import router as admin_router
+from app.api.provider_routes import router as provider_router
 from app.api.routes import router
 from app.core.config import get_settings
 from app.core.metrics import metrics
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(router, prefix="/api/v1")
     app.include_router(admin_router, prefix="/api/v1")
+    app.include_router(provider_router, prefix="/api/v1")
 
     @app.get("/metrics", tags=["system"])
     async def metrics_endpoint() -> Response:

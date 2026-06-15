@@ -13,6 +13,11 @@ DEFAULT_TENANT = "default"
 DEFAULT_USER = "analyst"
 DEFAULT_PASSWORD = "sentinel-demo"
 
+# Platform (provider) plane: a dedicated tenant that houses the platform owner.
+PLATFORM_TENANT = "__platform__"
+PROVIDER_USER = "provider"
+PROVIDER_PASSWORD = "provider-demo"
+
 
 async def init_db() -> None:
     """Create tables from metadata for dev/test.
@@ -39,5 +44,12 @@ async def seed_default() -> None:
         if existing is None:
             await users.create(
                 tenant.id, DEFAULT_USER, DEFAULT_PASSWORD, role="admin"
+            )
+        # Platform tenant + provider super-admin (cross-tenant operator).
+        platform = await tenants.ensure(PLATFORM_TENANT)
+        provider = await users.get_by_username(platform.id, PROVIDER_USER)
+        if provider is None:
+            await users.create(
+                platform.id, PROVIDER_USER, PROVIDER_PASSWORD, role="provider_admin"
             )
         await session.commit()

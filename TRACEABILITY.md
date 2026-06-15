@@ -48,8 +48,8 @@ that verify it, and the sprint that delivers it. Kept in lockstep with
 | S-3 | Role is assigned, not self-selected | role from `UserRow`, RBAC `require()` | `test_auth_rbac.py` | SP0 | ✅ |
 | S-4 | Tenant-scoped admin (manage own users) | `admin_routes.py`, `AdminPage` | `TestAdmin` | SP0 | 🅿️ (users only) |
 | S-5 | Tenant model: status/plan/trial/settings | `TenantRow` + `TenantRepository` + migration b1f2c3d4e5a6 | `test_repositories::test_tenant_*`, `test_admin_rules_audit::TestTenantStatus` | SP5 | ✅ |
-| S-6 | Provider super-admin (manage ALL tenants/users) | `provider_routes.py` + `PROVIDER_ADMIN` role | new | SP6 | ⬜ |
-| S-7 | Provider impersonation for support (audited) | provider route + audit | new | SP6 | ⬜ |
+| S-6 | Provider super-admin (manage ALL tenants/users) | `provider_routes.py` + `PROVIDER_ADMIN` role | `test_provider::TestProviderTenantManagement`, `TestProviderIsolation`, `test_agents_security::TestRBACProviderScope` | SP6 | ✅ |
+| S-7 | Provider impersonation for support (audited) | `provider_routes::impersonate` (dual-partition audit) | `test_provider::test_impersonate` | SP6 | ✅ |
 | S-8 | Per-tenant credentials (BYO Splunk/model/MCP) | `TenantCredentialRow` (encrypted) + resolver | new | SP7 | ⬜ |
 | S-9 | "Use managed (our keys)" vs "BYO" toggle | settings API + resolver fallback + UI | new | SP7/SP11 | ⬜ |
 | S-10 | Per-tenant env/config page | `GET/PUT /tenant/settings` + Settings UI | new | SP7/SP11 | ⬜ |

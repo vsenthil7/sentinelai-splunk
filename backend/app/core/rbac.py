@@ -17,7 +17,8 @@ class Permission(str, Enum):
     ACTION_APPROVE = "action:approve"
     CASE_WRITE = "case:write"  # notes, assignment, status
     AUDIT_READ = "audit:read"
-    ADMIN = "admin:*"  # user/tenant management
+    ADMIN = "admin:*"  # tenant-scoped user/settings management
+    PROVIDER = "provider:*"  # cross-tenant platform administration (super-admin)
 
 
 class Role(str, Enum):
@@ -25,6 +26,7 @@ class Role(str, Enum):
     ANALYST = "analyst"
     RESPONDER = "responder"
     ADMIN = "admin"
+    PROVIDER_ADMIN = "provider_admin"  # platform owner; above tenant admin
 
 
 _ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
@@ -46,7 +48,11 @@ _ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
         Permission.CASE_WRITE,
         Permission.ACTION_APPROVE,
     },
-    Role.ADMIN: set(Permission),  # all permissions
+    # Tenant admin gets everything EXCEPT the cross-tenant provider scope.
+    Role.ADMIN: set(Permission) - {Permission.PROVIDER},
+    # Provider admin (platform owner) holds the provider scope. Provider routes
+    # gate on PROVIDER specifically; this role is not a tenant member.
+    Role.PROVIDER_ADMIN: {Permission.PROVIDER},
 }
 
 
@@ -59,4 +65,10 @@ def permissions_for(role: str) -> set[Permission]:
 
 def has_permission(role: str, permission: Permission) -> bool:
     perms = permissions_for(role)
-    return Permission.ADMIN in perms or permission in perms
+    if permission in perms:
+        return True
+    # ADMIN wildcard grants tenant-scoped permissions, but NEVER the provider
+    # scope (which is cross-tenant and reserved for PROVIDER_ADMIN).
+    if permission is Permission.PROVIDER:
+        return False
+    return Permission.ADMIN in perms

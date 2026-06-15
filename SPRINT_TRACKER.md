@@ -53,14 +53,16 @@ enforcement**: blocked at login (403) AND on existing tokens via get_principal
 (403). 164 BE tests / 98% cov, ruff + mypy clean. Default tenant seeds as
 enterprise/active.
 
-### SP6 — Provider super-admin plane (the "manage ALL tenants/users" page) ⬜
-New `PROVIDER_ADMIN` role above tenant admin (platform owner — you). New
-`provider_routes.py`: list/create/suspend/reactivate tenants, list users across
-tenants, impersonate-for-support (audited), platform-wide audit view. Guarded by a
-provider-scope principal claim; **never** exposed to tenant admins.
-*DoD:* provider can manage any tenant; tenant admin gets 403 on provider routes;
-every provider action audited with `provider.*` actions; tenant isolation still holds
-for tenant-scoped roles.
+### SP6 — Provider super-admin plane (the "manage ALL tenants/users" page) ✅
+New `PROVIDER_ADMIN` role + `PROVIDER` permission. **Critical isolation fix:**
+tenant ADMIN's wildcard no longer grants the provider scope (was `set(Permission)`,
+now excludes PROVIDER; `has_permission` hard-denies PROVIDER to non-provider roles).
+`provider_routes.py`: GET/POST tenants, suspend/reactivate (PUT status), set plan,
+cross-tenant user list, audited impersonation (token issued as tenant admin, logged
+on BOTH platform + target-tenant partitions). `require_provider` gate. Seeded
+platform tenant `__platform__` + provider user. 187 BE tests / 98% cov (provider
+routes fully covered incl. all 403 isolation paths), ruff + mypy clean.
+Provider login: tenant `__platform__`, user `provider`, password `provider-demo`.
 
 ### SP7 — Per-tenant credentials + BYO-API / key management ⬜
 `TenantCredentialRow` (encrypted at rest via Fernet/`SENTINEL_SECRET_KEY`): per-tenant
