@@ -104,6 +104,12 @@ def get_audit(session: AsyncSession = Depends(db_session)) -> AuditService:
     return AuditService(session)
 
 
+def get_metering(session: AsyncSession = Depends(db_session)):  # type: ignore[no-untyped-def]
+    from app.services.metering import MeteringService
+
+    return MeteringService(session)
+
+
 async def get_principal(
     authorization: str = Header(default=""),
     session: AsyncSession = Depends(db_session),

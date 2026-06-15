@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     ai_model: str = "Foundation-Sec-1.1-8B-Instruct"
     ai_backend: Literal["mock", "live"] = "mock"
 
+    # Usage price book (cents per unit). Configurable per deployment so the cost
+    # model can be tuned without code changes. Defaults are illustrative.
+    price_search_cents: int = 2  # per SPL search executed
+    price_model_call_cents: int = 5  # per AI/model invocation
+    price_tokens_cents_per_1k: int = 1  # per 1,000 tokens processed
+    price_action_cents: int = 10  # per response action executed
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -39,6 +39,7 @@ from app.models.domain import Detection, Incident, Investigation, SearchResult
 from app.services.audit import AuditService
 from app.services.correlation import correlate
 from app.services.executor import ActionExecutor
+from app.services.metering import MeteringService
 from app.services.notifications import NotificationService
 from app.splunk.client import SplunkClient, SplunkError
 
@@ -173,9 +174,24 @@ async def run_investigations(
     audit: AuditService = Depends(deps.get_audit),
     notifier: NotificationService = Depends(deps.get_notifier),
     rules: RuleStateRepository = Depends(deps.get_rule_repo),
+    metering: MeteringService = Depends(deps.get_metering),
 ) -> InvestigationList:
+    from app.agents.detection_agent import DEFAULT_RULES
+    from app.services.metering import KIND_MODEL_CALL, KIND_SEARCH
+
     disabled = await rules.disabled_rule_ids(principal.tenant_id)
     investigations = await orch.run_full_pipeline(disabled)
+    # Meter the work performed: one SPL search per enabled detection rule, and
+    # one model call per investigation triaged (best-effort; never fails the run).
+    enabled_rule_count = sum(1 for r in DEFAULT_RULES if r.rule_id not in disabled)
+    await metering.record(
+        principal.tenant_id, KIND_SEARCH, quantity=enabled_rule_count, detail="detection run"
+    )
+    if investigations:
+        await metering.record(
+            principal.tenant_id, KIND_MODEL_CALL, quantity=len(investigations),
+            detail="triage",
+        )
     for inv in investigations:
         await repo.save(principal.tenant_id, inv)
         await audit.record(
@@ -286,6 +302,7 @@ async def execute_action(
     audit: AuditService = Depends(deps.get_audit),
     executor: ActionExecutor = Depends(deps.get_executor),
     notifier: NotificationService = Depends(deps.get_notifier),
+    metering: MeteringService = Depends(deps.get_metering),
 ) -> Investigation:
     inv, error = await repo.execute_action(
         principal.tenant_id, investigation_id, body.action_index, executor
@@ -301,6 +318,12 @@ async def execute_action(
             detail="Investigation or action not found",
         )
     executed = inv.actions[body.action_index]
+    # Meter the executed response action (best-effort).
+    from app.services.metering import KIND_ACTION
+
+    await metering.record(
+        principal.tenant_id, KIND_ACTION, quantity=1, detail=executed.action_type
+    )
     await audit.record(
         tenant_id=principal.tenant_id,
         actor=principal.username,

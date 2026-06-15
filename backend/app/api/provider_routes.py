@@ -17,6 +17,8 @@ from app.api import deps
 from app.api.schemas import (
     CreateTenantRequest,
     ImpersonateResponse,
+    ProviderUsageResponse,
+    ProviderUsageRow,
     ProviderUserResponse,
     TenantPlanRequest,
     TenantResponse,
@@ -206,4 +208,33 @@ async def impersonate(
     return ImpersonateResponse(
         access_token=token, tenant=tenant.name, role=admin.role,
         impersonated_user=admin.username,
+    )
+
+
+@router.get("/usage", response_model=ProviderUsageResponse)
+async def provider_usage(
+    principal: Principal = Depends(deps.require_provider),
+    session: AsyncSession = Depends(deps.db_session),
+) -> ProviderUsageResponse:
+    """Platform-wide usage cost rollup: per-tenant totals + grand total."""
+    from app.services.metering import MeteringService
+
+    tenants = TenantRepository(session)
+    metering = MeteringService(session)
+    rows: list[ProviderUsageRow] = []
+    grand = 0
+    for t in await tenants.list():
+        if t.name == PLATFORM_TENANT:
+            continue
+        rollup = await metering.rollup(t.id)
+        grand += rollup.total_cost_cents
+        rows.append(
+            ProviderUsageRow(
+                tenant_id=t.id, tenant_name=t.name, plan=t.plan,
+                total_cost_cents=rollup.total_cost_cents,
+                total_cost_usd=rollup.total_cost_usd,
+            )
+        )
+    return ProviderUsageResponse(
+        tenants=rows, grand_total_cents=grand, grand_total_usd=round(grand / 100, 2)
     )

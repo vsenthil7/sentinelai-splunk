@@ -212,3 +212,24 @@ class TenantSettingsResponse(BaseModel):
 
 class UpdateSettingsRequest(BaseModel):
     settings: dict[str, object]
+
+
+class UsageRollupResponse(BaseModel):
+    tenant: str
+    by_kind: dict[str, dict[str, int]]  # kind -> {quantity, cost_cents}
+    total_cost_cents: int
+    total_cost_usd: float
+
+
+class ProviderUsageRow(BaseModel):
+    tenant_id: str
+    tenant_name: str
+    plan: str
+    total_cost_cents: int
+    total_cost_usd: float
+
+
+class ProviderUsageResponse(BaseModel):
+    tenants: list[ProviderUsageRow]
+    grand_total_cents: int
+    grand_total_usd: float

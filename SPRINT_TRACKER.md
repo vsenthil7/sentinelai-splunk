@@ -78,14 +78,18 @@ secrets write-only, audited without leaking values). Migration `c2d3e4f5a6b7`
 (`get_tenant_orchestrator` referencing `get_principal` before definition).
 207 BE tests / 98% cov, ruff + mypy clean. cryptography added to deps.
 
-### SP8 — Usage metering + cost engine ⬜
-`UsageEventRow` (tenant_id, kind: search|model_call|action|tokens, quantity, cost_cents,
-ts). Meter hooks in detection agent (per SPL search), ai_model (per call + token
-estimate), executor (per action). `CostService`: configurable price book
-(per-search, per-1k-tokens by model, per-action), rolls usage → cost per tenant per
-period. Honest note: token counts are estimates unless the live model returns usage.
-*DoD:* running the pipeline emits usage events; cost rollup computes; price book
-configurable; tested.
+### SP8 — Usage metering + cost engine ✅
+`UsageEventRow` (kind: search|model_call|tokens|action, quantity, denormalized
+`cost_cents`, detail, ts) + migration `d3e4f5a6b7c8`. `MeteringService` with a
+configurable `PriceBook` (cents-per-unit from env: search 2¢, model_call 5¢,
+tokens 1¢/1k, action 10¢) computes cost at record time and rolls up per tenant
+grouped by kind (SQL aggregation, optional time window; tokens billed per-1k block,
+rounded up). **Meter hooks**: `investigations/run` records 1 search per enabled
+rule + 1 model_call per investigation; `execute` records 1 action. **APIs**:
+`GET /tenant/usage` (own rollup, admin-gated) + `GET /provider/usage` (platform-wide
+per-tenant + grand total, provider-gated). 222 BE tests / 98% cov (metering 100%),
+ruff + mypy clean, all 4 migrations upgrade+downgrade verified. Honest note: token
+counts will be estimates until a live model returns real usage.
 
 ### SP9 — Billing surface: quotas, plans, cost dashboard ⬜
 Plan → quota map (searches/month, model calls/month, seats). Quota enforcement

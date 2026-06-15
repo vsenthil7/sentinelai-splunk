@@ -54,10 +54,10 @@ that verify it, and the sprint that delivers it. Kept in lockstep with
 | S-9 | "Use managed (our keys)" vs "BYO" toggle | `mode` field + resolver fallback + `get_tenant_orchestrator` | `test_credentials::TestResolver`, `test_tenant_settings::test_byo_mock_still_runs_pipeline` | SP7 (UI=SP11) | 🅿️ |
 | S-10 | Per-tenant env/config page | `GET/PUT /tenant/settings` + `/tenant/credentials` | `test_tenant_settings::TestTenantSettings` | SP7 (UI=SP11) | 🅿️ |
 | S-16 | Secrets never leak (write-only, encrypted, not logged) | Fernet + `*_set` view + audit redaction | `test_tenant_settings` (secret not in response/audit text) | SP7 | ✅ |
-| S-11 | Usage metering (searches/model/tokens/actions) | `UsageEventRow` + meter hooks | new | SP8 | ⬜ |
-| S-12 | Cost calculation (price book → per-tenant cost) | `CostService` + price book | new | SP8 | ⬜ |
+| S-11 | Usage metering (searches/model/tokens/actions) | `UsageEventRow` + `MeteringService` meter hooks + migration d3e4f5a6b7c8 | `test_metering`, `test_usage::TestUsageMetering` | SP8 | ✅ |
+| S-12 | Cost calculation (price book → per-tenant cost) | `PriceBook` (env-configurable) + `rollup` | `test_metering::TestPriceBook`, `TestMeteringService` | SP8 | ✅ |
 | S-13 | Quotas + plan enforcement | plan→quota map, 402/429 gating | new | SP9 | ⬜ |
-| S-14 | Usage & cost dashboard (tenant + provider rollup) | `GET /tenant/usage`, `/provider/usage` + UI | new | SP9/SP11 | ⬜ |
+| S-14 | Usage & cost dashboard (tenant + provider rollup) | `GET /tenant/usage`, `GET /provider/usage` (+ UI in SP11) | `test_usage::TestProviderUsage` | SP8 (UI=SP11) | 🅿️ |
 | S-15 | Tenant self-service signup/onboarding | `POST /signup` + wizard | new | SP10 | ⬜ |
 
 ## E. Enterprise non-functionals (carried, verified)

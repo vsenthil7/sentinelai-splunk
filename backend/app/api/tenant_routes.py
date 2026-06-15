@@ -20,12 +20,14 @@ from app.api.schemas import (
     TenantSettingsResponse,
     UpdateCredentialsRequest,
     UpdateSettingsRequest,
+    UsageRollupResponse,
 )
 from app.core.principal import Principal
 from app.core.rbac import Permission
 from app.db.repositories import TenantRepository
 from app.services.audit import AuditService
 from app.services.credentials import CredentialRepository
+from app.services.metering import MeteringService
 
 router = APIRouter(prefix="/tenant", tags=["tenant"])
 
@@ -116,3 +118,18 @@ async def update_credentials(
     )
     view = await repo.view(principal.tenant_id)
     return CredentialView(**view.__dict__)
+
+
+@router.get("/usage", response_model=UsageRollupResponse)
+async def get_usage(
+    principal: Principal = Depends(deps.require(Permission.ADMIN)),
+    session: AsyncSession = Depends(deps.db_session),
+) -> UsageRollupResponse:
+    """This tenant's metered usage and computed cost, grouped by kind."""
+    tenant = await TenantRepository(session).get(principal.tenant_id)
+    name = tenant.name if tenant else principal.tenant_id
+    rollup = await MeteringService(session).rollup(principal.tenant_id)
+    return UsageRollupResponse(
+        tenant=name, by_kind=rollup.by_kind,
+        total_cost_cents=rollup.total_cost_cents, total_cost_usd=rollup.total_cost_usd,
+    )

@@ -140,6 +140,28 @@ class AuditLogRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class UsageEventRow(Base):
+    """A metered, billable usage event for a tenant.
+
+    ``kind`` is one of: search | model_call | tokens | action. ``quantity`` is
+    the count (searches, calls, tokens, actions). ``cost_cents`` is the computed
+    cost at record time per the active price book (denormalized so historical
+    cost is stable even if the price book later changes).
+    """
+
+    __tablename__ = "usage_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(32), index=True)
+    kind: Mapped[str] = mapped_column(String(20), index=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    cost_cents: Mapped[int] = mapped_column(Integer, default=0)
+    detail: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, index=True
+    )
+
+
 class TenantCredentialRow(Base):
     """Per-tenant integration credentials. Secret fields are encrypted at rest.
 
