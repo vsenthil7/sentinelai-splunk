@@ -174,6 +174,20 @@ class TestFactories:
         )
         assert isinstance(c, LiveSplunkClient)
 
+    def test_splunk_mcp_factory(self):
+        from app.core.config import Settings
+        from app.splunk.factory import build_splunk_client
+        from app.splunk.mcp_client import McpSplunkClient
+
+        c = build_splunk_client(
+            Settings(
+                splunk_backend="mcp",
+                splunk_mcp_url="https://x/mcp",
+                splunk_token="t",
+            )
+        )
+        assert isinstance(c, McpSplunkClient)
+
     def test_ai_live_factory(self):
         from app.core.config import Settings
         from app.services.ai_factory import build_ai_model
@@ -266,3 +280,142 @@ class TestAgentBranches:
         )
         actions = ResponseAgent().plan(det, verdict)
         assert actions[0].action_type == "block_ip"
+
+
+def _mcp_stub(monkeypatch, *, status=200, payload=None, raise_connect=False):
+    """Install a fake httpx.AsyncClient that returns a canned MCP JSON-RPC response."""
+
+    class FakeResp:
+        status_code = status
+        text = "error-body"
+
+        def json(self):
+            return payload or {}
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise httpx.HTTPStatusError("err", request=None, response=None)
+
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, *a, **k):
+            if raise_connect:
+                raise httpx.ConnectError("unreachable")
+            return FakeResp()
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **k: FakeClient())
+
+
+class TestMcpSplunkClient:
+    def _client(self):
+        from app.splunk.mcp_client import McpSplunkClient
+
+        return McpSplunkClient(url="https://x/mcp", token="t")
+
+    def test_requires_url_and_token(self):
+        from app.splunk.client import SplunkAuthError, SplunkConnectionError
+        from app.splunk.mcp_client import McpSplunkClient
+
+        with pytest.raises(SplunkConnectionError):
+            McpSplunkClient(url="", token="t")
+        with pytest.raises(SplunkAuthError):
+            McpSplunkClient(url="https://x/mcp", token="")
+
+    async def test_search_structured_content(self, monkeypatch):
+        payload = {
+            "result": {
+                "sid": "mcp-1",
+                "structuredContent": {
+                    "results": [
+                        {"_raw": "e", "source": "s", "sourcetype": "st",
+                         "host": "h", "_time": "2026-06-08T10:00:00Z", "user": "bob"}
+                    ]
+                },
+            }
+        }
+        _mcp_stub(monkeypatch, payload=payload)
+        result = await self._client().search("index=x")
+        assert result.event_count == 1
+        assert result.sid == "mcp-1"
+        assert result.events[0].fields["user"] == "bob"
+
+    async def test_search_text_block_list(self, monkeypatch):
+        import json as _json
+
+        rows = [{"_raw": "e", "host": "h", "_time": "not-a-time"}]
+        payload = {"result": {"content": [{"type": "text", "text": _json.dumps(rows)}]}}
+        _mcp_stub(monkeypatch, payload=payload)
+        result = await self._client().search("search index=x")
+        assert result.event_count == 1
+        # Unparseable _time falls back to now() (aware datetime).
+        assert result.events[0].timestamp.tzinfo is not None
+
+    async def test_search_text_block_results_dict(self, monkeypatch):
+        import json as _json
+
+        body = {"results": [{"_raw": "e", "host": "h"}]}
+        payload = {"result": {"content": [{"type": "text", "text": _json.dumps(body)}]}}
+        _mcp_stub(monkeypatch, payload=payload)
+        result = await self._client().search("search x")
+        assert result.event_count == 1
+
+    async def test_search_ignores_non_text_and_bad_json(self, monkeypatch):
+        payload = {
+            "result": {
+                "content": [
+                    {"type": "image", "data": "x"},
+                    {"type": "text", "text": "{not json"},
+                ]
+            }
+        }
+        _mcp_stub(monkeypatch, payload=payload)
+        result = await self._client().search("search x")
+        assert result.event_count == 0
+
+    async def test_empty_spl_rejected(self):
+        from app.splunk.client import SplunkQueryError
+
+        with pytest.raises(SplunkQueryError):
+            await self._client().search("   ")
+
+    async def test_auth_error(self, monkeypatch):
+        from app.splunk.client import SplunkAuthError
+
+        _mcp_stub(monkeypatch, status=401)
+        with pytest.raises(SplunkAuthError):
+            await self._client().search("search x")
+
+    async def test_query_error_400(self, monkeypatch):
+        from app.splunk.client import SplunkQueryError
+
+        _mcp_stub(monkeypatch, status=400)
+        with pytest.raises(SplunkQueryError):
+            await self._client().search("search x")
+
+    async def test_jsonrpc_error(self, monkeypatch):
+        from app.splunk.client import SplunkQueryError
+
+        payload = {"error": {"code": -32000, "message": "bad tool"}}
+        _mcp_stub(monkeypatch, payload=payload)
+        with pytest.raises(SplunkQueryError):
+            await self._client().search("search x")
+
+    async def test_connect_error(self, monkeypatch):
+        from app.splunk.client import SplunkConnectionError
+
+        _mcp_stub(monkeypatch, raise_connect=True)
+        with pytest.raises(SplunkConnectionError):
+            await self._client().search("search x")
+
+    async def test_health_ok(self, monkeypatch):
+        _mcp_stub(monkeypatch, status=200, payload={"result": {"tools": []}})
+        assert await self._client().health() is True
+
+    async def test_health_bad_status(self, monkeypatch):
+        _mcp_stub(monkeypatch, status=503, payload={})
+        assert await self._client().health() is False

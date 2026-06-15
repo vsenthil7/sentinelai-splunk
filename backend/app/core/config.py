@@ -37,11 +37,14 @@ class Settings(BaseSettings):
     # CORS (comma-separated origins; "*" allows all — tighten in prod)
     cors_origins: str = "*"
 
-    # Splunk backend selection: "mock" for local/test, "live" for real instance
-    splunk_backend: Literal["mock", "live"] = "mock"
+    # Splunk backend selection: "mock" (local/test), "live" (REST API),
+    # or "mcp" (Splunk MCP Server — agent-to-Splunk over Model Context Protocol)
+    splunk_backend: Literal["mock", "live", "mcp"] = "mock"
     splunk_host: str = "https://localhost:8089"
     splunk_token: str = ""
     splunk_mcp_url: str = ""
+    # MCP search tool name (forward-compat across Splunk MCP TA versions)
+    splunk_mcp_search_tool: str = "run_oneshot_search"
 
     # AI / hosted models
     ai_model: str = "Foundation-Sec-1.1-8B-Instruct"
