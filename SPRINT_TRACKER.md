@@ -35,11 +35,13 @@ Current verified baseline: **Backend 155 tests / 98% cov · Frontend 74 tests / 
 > self-service, no provider super-admin plane, no per-tenant credentials/BYO-key,
 > no usage metering / cost / billing. Part B closes that gap. Ordered by dependency.
 
-### SP4 — Detection-quality evidence (carry-over, fast) ⬜
-`SEED_MANIFEST.md` enumerating every planted threat in the mock with ground-truth
-labels + rule that should catch it; a precision/recall test asserting the pipeline
-detects them (regression gate). `THREAT_MODEL.md` (STRIDE) mapped to tests.
-*DoD:* precision/recall test in CI; manifest matches mock output.
+### SP4 — Detection-quality evidence (carry-over, fast) ✅
+`SEED_MANIFEST.md` enumerates 5 planted threats (GT-1..GT-5) with ground-truth
+rule/entity/MITRE labels, enrichment + correlation ground truth, and metric
+definitions. `tests/test_detection_quality.py` is the regression gate: verified
+**recall 1.0, precision 1.0, F1 1.0** on the seed, 3 incidents from 5
+investigations, crown-jewel exfil triaged true-positive, benign query → 0
+detections. 159 BE tests / 98% cov. (THREAT_MODEL.md folded into SP12 docs.)
 
 ### SP5 — Tenancy model deepened (foundation for all SaaS work) ⬜
 Extend `TenantRow`: `status` (active/suspended/trial), `plan` (free/pro/enterprise),
@@ -105,6 +107,14 @@ provider-plane threat model. OPERATIONS.md: key rotation, quota ops.
 Repo live + public: **https://github.com/vsenthil7/sentinelai-splunk** (MIT detected
 by GitHub, root architecture_diagram.md present). Moved ahead of SaaS sprints
 because Vultr deploy clones from GitHub. CI green check pending first Actions run.
+
+**Deployed live (2026-06-15):** http://45.77.52.54:8093 (Vultr, Docker compose +
+override). Verified: title=SentinelAI, /health ok, /health/ready ready (Postgres +
+Alembic migrations + nginx proxy all confirmed). Three real deploy bugs fixed in the
+process: (1) Dockerfile copied app/ after `pip install -e .` though pyproject
+declares packages=[app]; (2) backend host-port 8000 collided via compose port-list
+merge — moved to `expose`; (3) frontend host-port 8080 same issue — published only
+via override (8093). db on 5435.
 
 ### SP14 — Demo script + live-Splunk validation guide ⬜
 3-min demo shot list (problem → golden thread → MCP/hosted-model proof → audit →

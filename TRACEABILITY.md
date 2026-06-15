@@ -71,4 +71,4 @@ that verify it, and the sprint that delivers it. Kept in lockstep with
 | E-5 | Containerized deploy | Dockerfiles + compose + nginx | ✅ |
 | E-6 | Health probes (live/ready) | `/health/live`, `/health/ready` | ✅ |
 | E-7 | Server-side token revocation | `RevokedTokenRow` + `/auth/logout` | ✅ |
-| E-8 | Detection precision/recall vs ground truth | `SEED_MANIFEST.md` + test | SP4 ⬜ |
+| E-8 | Detection precision/recall vs ground truth | `SEED_MANIFEST.md` + `test_detection_quality.py` | ✅ |
