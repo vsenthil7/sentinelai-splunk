@@ -520,6 +520,28 @@ async def mitre_coverage(
     )
 
 
+@router.get("/ai/models", tags=["agents"])
+async def ai_models(
+    principal: Principal = Depends(deps.require(Permission.INVESTIGATION_READ)),
+) -> dict[str, object]:
+    """Splunk hosted-model catalog and task routing.
+
+    Shows which Splunk-hosted model each agent task is routed to, so the
+    "right model for the job" design is inspectable: Foundation-Sec for security
+    triage, gpt-oss for summaries, Cisco Deep Time Series for anomaly scoring.
+    """
+    from app.core.config import get_settings as _gs
+    from app.services.hosted_models import DEFAULT_MODEL_FOR_TASK, catalog
+
+    settings = _gs()
+    return {
+        "ai_backend": settings.ai_backend,
+        "active_triage_model": settings.ai_model,
+        "task_routing": {t.value: m for t, m in DEFAULT_MODEL_FOR_TASK.items()},
+        "catalog": catalog(),
+    }
+
+
 @router.get("/notifications", tags=["system"])
 async def list_notifications(
     principal: Principal = Depends(deps.require(Permission.INVESTIGATION_READ)),

@@ -419,3 +419,26 @@ class TestMcpSplunkClient:
     async def test_health_bad_status(self, monkeypatch):
         _mcp_stub(monkeypatch, status=503, payload={})
         assert await self._client().health() is False
+
+
+class TestHostedModels:
+    def test_catalog_shape(self):
+        from app.services.hosted_models import catalog
+
+        cat = catalog()
+        assert len(cat) == 4
+        for entry in cat:
+            assert {"model_id", "provider", "task", "purpose", "is_chat"} <= set(entry)
+
+    def test_model_for_task_routing(self):
+        from app.services.hosted_models import ModelTask, model_for_task
+
+        assert model_for_task(ModelTask.SECURITY_TRIAGE) == "Foundation-Sec-1.1-8B-Instruct"
+        assert model_for_task(ModelTask.SUMMARIZATION) == "gpt-oss-120b"
+        assert model_for_task(ModelTask.TIME_SERIES) == "Cisco-DeepTimeSeries"
+
+    def test_time_series_model_is_not_chat(self):
+        from app.services.hosted_models import HOSTED_MODELS
+
+        ts = next(m for m in HOSTED_MODELS if m.model_id == "Cisco-DeepTimeSeries")
+        assert ts.is_chat is False

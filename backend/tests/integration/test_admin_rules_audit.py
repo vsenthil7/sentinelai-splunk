@@ -184,3 +184,17 @@ class TestSystem:
     async def test_request_id_header(self, client):
         resp = await client.get("/api/v1/health")
         assert "x-request-id" in resp.headers
+
+    async def test_ai_models_catalog(self, client, auth):
+        resp = await client.get("/api/v1/ai/models", headers=auth)
+        assert resp.status_code == 200
+        body = resp.json()
+        # Security triage routes to the Foundation security model.
+        assert body["task_routing"]["security_triage"] == "Foundation-Sec-1.1-8B-Instruct"
+        ids = {m["model_id"] for m in body["catalog"]}
+        assert "Foundation-Sec-1.1-8B-Instruct" in ids
+        assert "Cisco-DeepTimeSeries" in ids
+
+    async def test_ai_models_requires_auth(self, client):
+        resp = await client.get("/api/v1/ai/models")
+        assert resp.status_code == 401
