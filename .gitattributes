@@ -1,0 +1,11 @@
+# Normalize line endings to LF in the repo for cross-platform CI consistency
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.tar.gz binary
+*.woff binary
+*.woff2 binary

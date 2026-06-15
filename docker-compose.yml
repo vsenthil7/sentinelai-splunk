@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel}
+      POSTGRES_DB: sentinel
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SENTINEL_DATABASE_URL: postgresql+asyncpg://sentinel:${POSTGRES_PASSWORD:-sentinel}@db:5432/sentinel
+      SENTINEL_DB_CREATE_ALL: "false"        # use migrations in prod
+      SENTINEL_JWT_SECRET: ${JWT_SECRET:-change-me-in-prod}
+      SENTINEL_SPLUNK_BACKEND: ${SPLUNK_BACKEND:-mock}
+      SENTINEL_AI_BACKEND: ${AI_BACKEND:-mock}
+      SENTINEL_CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      WEB_CONCURRENCY: "4"
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
