@@ -56,7 +56,7 @@ that verify it, and the sprint that delivers it. Kept in lockstep with
 | S-16 | Secrets never leak (write-only, encrypted, not logged) | Fernet + `*_set` view + audit redaction | `test_tenant_settings` (secret not in response/audit text) | SP7 | ✅ |
 | S-11 | Usage metering (searches/model/tokens/actions) | `UsageEventRow` + `MeteringService` meter hooks + migration d3e4f5a6b7c8 | `test_metering`, `test_usage::TestUsageMetering` | SP8 | ✅ |
 | S-12 | Cost calculation (price book → per-tenant cost) | `PriceBook` (env-configurable) + `rollup` | `test_metering::TestPriceBook`, `TestMeteringService` | SP8 | ✅ |
-| S-13 | Quotas + plan enforcement | plan→quota map, 402/429 gating | new | SP9 | ⬜ |
+| S-13 | Quotas + plan enforcement | `quotas.py` (PLAN_QUOTAS, QuotaService) + 429 gate in run + `GET /tenant/quota` | `test_quotas`, `test_quotas_enforcement` | SP9 | ✅ |
 | S-14 | Usage & cost dashboard (tenant + provider rollup) | `GET /tenant/usage`, `GET /provider/usage` (+ UI in SP11) | `test_usage::TestProviderUsage` | SP8 (UI=SP11) | 🅿️ |
 | S-15 | Tenant self-service signup/onboarding | `POST /signup` + wizard | new | SP10 | ⬜ |
 

@@ -233,3 +233,17 @@ class ProviderUsageResponse(BaseModel):
     tenants: list[ProviderUsageRow]
     grand_total_cents: int
     grand_total_usd: float
+
+
+class QuotaStatusItem(BaseModel):
+    kind: str
+    used: int
+    limit: int  # -1 == unlimited
+    remaining: int  # -1 == unlimited
+    warn: bool
+
+
+class QuotaResponse(BaseModel):
+    tenant: str
+    plan: str
+    quotas: list[QuotaStatusItem]

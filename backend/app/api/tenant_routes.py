@@ -17,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.api.schemas import (
     CredentialView,
+    QuotaResponse,
+    QuotaStatusItem,
     TenantSettingsResponse,
     UpdateCredentialsRequest,
     UpdateSettingsRequest,
@@ -133,3 +135,28 @@ async def get_usage(
         tenant=name, by_kind=rollup.by_kind,
         total_cost_cents=rollup.total_cost_cents, total_cost_usd=rollup.total_cost_usd,
     )
+
+
+@router.get("/quota", response_model=QuotaResponse)
+async def get_quota(
+    principal: Principal = Depends(deps.require(Permission.ADMIN)),
+    session: AsyncSession = Depends(deps.db_session),
+) -> QuotaResponse:
+    """This tenant's plan quota headroom (month-to-date) for metered operations."""
+    from app.services.metering import KIND_MODEL_CALL, KIND_SEARCH
+    from app.services.quotas import QuotaService
+
+    tenant = await TenantRepository(session).get(principal.tenant_id)
+    name = tenant.name if tenant else principal.tenant_id
+    plan = tenant.plan if tenant else "free"
+    svc = QuotaService(session)
+    items: list[QuotaStatusItem] = []
+    for kind in (KIND_SEARCH, KIND_MODEL_CALL):
+        st = await svc.status(principal.tenant_id, plan, kind, want=0)
+        items.append(
+            QuotaStatusItem(
+                kind=st.kind, used=st.used, limit=st.limit,
+                remaining=st.remaining, warn=st.warn,
+            )
+        )
+    return QuotaResponse(tenant=name, plan=plan, quotas=items)

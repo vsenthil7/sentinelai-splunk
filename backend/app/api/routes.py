@@ -175,15 +175,33 @@ async def run_investigations(
     notifier: NotificationService = Depends(deps.get_notifier),
     rules: RuleStateRepository = Depends(deps.get_rule_repo),
     metering: MeteringService = Depends(deps.get_metering),
+    session: AsyncSession = Depends(deps.db_session),
 ) -> InvestigationList:
     from app.agents.detection_agent import DEFAULT_RULES
     from app.services.metering import KIND_MODEL_CALL, KIND_SEARCH
+    from app.services.quotas import QuotaExceeded, QuotaService
 
     disabled = await rules.disabled_rule_ids(principal.tenant_id)
+    enabled_rule_count = sum(1 for r in DEFAULT_RULES if r.rule_id not in disabled)
+    # Enforce the tenant's monthly search quota BEFORE doing the work.
+    tenant = await TenantRepository(session).get(principal.tenant_id)
+    plan = tenant.plan if tenant else "free"
+    try:
+        await QuotaService(session).check_or_raise(
+            principal.tenant_id, plan, KIND_SEARCH, want=enabled_rule_count
+        )
+    except QuotaExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "quota_exceeded", "kind": exc.kind,
+                "used": exc.used, "limit": exc.limit,
+                "message": "Monthly search quota exceeded. Upgrade plan to continue.",
+            },
+        ) from exc
     investigations = await orch.run_full_pipeline(disabled)
     # Meter the work performed: one SPL search per enabled detection rule, and
     # one model call per investigation triaged (best-effort; never fails the run).
-    enabled_rule_count = sum(1 for r in DEFAULT_RULES if r.rule_id not in disabled)
     await metering.record(
         principal.tenant_id, KIND_SEARCH, quantity=enabled_rule_count, detail="detection run"
     )

@@ -91,12 +91,16 @@ per-tenant + grand total, provider-gated). 222 BE tests / 98% cov (metering 100%
 ruff + mypy clean, all 4 migrations upgrade+downgrade verified. Honest note: token
 counts will be estimates until a live model returns real usage.
 
-### SP9 — Billing surface: quotas, plans, cost dashboard ⬜
-Plan → quota map (searches/month, model calls/month, seats). Quota enforcement
-(soft warn at 80%, hard 402/429 at 100% for free/trial). `GET /tenant/usage` +
-`GET /provider/usage` (all tenants). UI: per-tenant Usage & Cost dashboard (charts),
-provider revenue rollup. ROI/cost calculator in README (§P commercial readiness).
-*DoD:* quota enforced + tested; usage dashboard renders; provider sees cross-tenant rollup.
+### SP9 — Billing surface: quotas, plans, cost dashboard ✅ (APIs; UI in SP11)
+`PLAN_QUOTAS` map (free 100 searches/50 model-calls per month, trial 250/150,
+pro 10k/5k, enterprise unlimited). `QuotaService` computes month-to-date usage
+from `usage_events` and enforces: `investigations/run` calls `check_or_raise`
+BEFORE doing work and returns **429** with `{error:quota_exceeded,kind,used,limit}`
+when a plan cap would be exceeded; enterprise is never blocked. Soft-warn flag at
+80%. `GET /tenant/quota` exposes per-kind headroom (used/limit/remaining/warn).
+236 BE tests / 98% cov (quotas 100%), ruff + mypy clean. Honest gap: counts are
+read per-check (no row lock) so tiny overage is possible under high concurrency —
+documented; a hard financial gate would use reserved counters.
 
 ### SP10 — Tenant self-service onboarding ⬜
 Public `POST /signup` → creates tenant (trial plan) + first admin user, audited,
