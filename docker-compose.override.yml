@@ -1,0 +1,34 @@
+# Vultr / single-host deployment override for SentinelAI.
+# Follows the /srv/<project> + override-pins-host-ports convention used on the
+# atrio-demo box (one project per /srv folder, override pins unique host ports).
+#
+# Public surface = ONE port: 8096 -> frontend nginx, which proxies /api and
+# /metrics to the backend over the internal docker network. The backend is
+# bound to 127.0.0.1:8196 (host-local only, for debugging) and is NOT public.
+# Postgres is exposed on 5435 for ops/inspection.
+#
+# Usage on the server:
+#   cd /srv/sentinelai
+#   cp .env.vultr .env            # then edit secrets (JWT_SECRET, POSTGRES_PASSWORD)
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+services:
+  db:
+    ports:
+      - "5435:5432"
+
+  backend:
+    # Host-local only (not internet-facing); public traffic goes via the nginx proxy.
+    ports:
+      - "127.0.0.1:8196:8000"
+    environment:
+      SENTINEL_CORS_ORIGINS: ${CORS_ORIGINS:-http://45.77.52.54:8096}
+      # Splunk live/mcp wiring (only used when SPLUNK_BACKEND is live/mcp).
+      SENTINEL_SPLUNK_HOST: ${SENTINEL_SPLUNK_HOST:-https://localhost:8089}
+      SENTINEL_SPLUNK_TOKEN: ${SENTINEL_SPLUNK_TOKEN:-}
+      SENTINEL_SPLUNK_MCP_URL: ${SENTINEL_SPLUNK_MCP_URL:-}
+      SENTINEL_SPLUNK_MCP_SEARCH_TOOL: ${SENTINEL_SPLUNK_MCP_SEARCH_TOOL:-run_oneshot_search}
+      SENTINEL_AI_MODEL: ${SENTINEL_AI_MODEL:-Foundation-Sec-1.1-8B-Instruct}
+
+  frontend:
+    ports:
+      - "8096:80"

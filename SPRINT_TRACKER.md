@@ -101,10 +101,10 @@ cost model, setup (mock + live Splunk + MCP). SECURITY.md: add credential encryp
 provider-plane threat model. OPERATIONS.md: key rotation, quota ops.
 *DoD:* docs match shipped behavior; KNOWN_GAPS honest.
 
-### SP13 — Push to GitHub (public, MIT) + CI green ⬜
-Create public repo under `vsenthil7`, push all history, confirm CI (ruff/mypy/pytest/
-frontend/build) passes on GitHub Actions.
-*DoD:* public repo with OSI license visible; green CI badge.
+### SP13 — Push to GitHub (public, MIT) + CI green ✅
+Repo live + public: **https://github.com/vsenthil7/sentinelai-splunk** (MIT detected
+by GitHub, root architecture_diagram.md present). Moved ahead of SaaS sprints
+because Vultr deploy clones from GitHub. CI green check pending first Actions run.
 
 ### SP14 — Demo script + live-Splunk validation guide ⬜
 3-min demo shot list (problem → golden thread → MCP/hosted-model proof → audit →
