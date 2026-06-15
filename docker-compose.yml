@@ -36,8 +36,12 @@ services:
     build: ./frontend
     depends_on:
       - backend
-    ports:
-      - "8080:80"
+    # Host port is published by the deployment override (e.g. docker-compose.override.yml
+    # pins 8093 on the Vultr box). Kept out of base to avoid compose port-list
+    # merge appending a colliding default. For a standalone local run, publish
+    # via override or `docker compose run -p 8080:80 frontend`.
+    expose:
+      - "80"
 
 volumes:
   pgdata:
