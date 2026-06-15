@@ -1,7 +1,7 @@
 """Unit tests for service-layer logic (no HTTP, mostly no DB)."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -10,10 +10,8 @@ from app.core.resilience import CircuitBreaker, CircuitOpenError, with_retry
 from app.models.domain import (
     Detection,
     DetectionStatus,
-    Incident,
     Investigation,
     Severity,
-    TriageVerdict,
 )
 from app.services.correlation import correlate
 from app.services.enrichment import EnrichmentService, MockEnrichmentProvider
@@ -105,13 +103,13 @@ class TestWorkflow:
         assert not can_transition(DetectionStatus.CONTAINED, DetectionStatus.NEW)
 
     def test_sla_not_breached_fresh(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         sla = compute_sla(now, None, None, now=now)
         assert sla["ack_breached"] is False
         assert sla["contain_breached"] is False
 
     def test_sla_breached_when_overdue(self):
-        created = datetime.now(timezone.utc) - timedelta(hours=3)
+        created = datetime.now(UTC) - timedelta(hours=3)
         sla = compute_sla(created, None, None)
         assert sla["ack_breached"] is True
         assert sla["contain_breached"] is True
