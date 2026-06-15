@@ -115,6 +115,8 @@ async def login(
     tenant = await tenants.get_by_name(body.tenant)
     if tenant is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if tenant.status == "suspended":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tenant is suspended")
     user = await users.authenticate(tenant.id, body.username, body.password)
     if not user:
         await audit.record(

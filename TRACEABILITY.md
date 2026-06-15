@@ -47,7 +47,7 @@ that verify it, and the sprint that delivers it. Kept in lockstep with
 | S-2 | Login with tenant + role-based access | `LoginPage` (tenant field), RBAC matrix | `test_auth_rbac.py`, FE `pages.test` | SP0 | ✅ |
 | S-3 | Role is assigned, not self-selected | role from `UserRow`, RBAC `require()` | `test_auth_rbac.py` | SP0 | ✅ |
 | S-4 | Tenant-scoped admin (manage own users) | `admin_routes.py`, `AdminPage` | `TestAdmin` | SP0 | 🅿️ (users only) |
-| S-5 | Tenant model: status/plan/trial/settings | extend `TenantRow` + `TenantSettingsRow` | new | SP5 | ⬜ |
+| S-5 | Tenant model: status/plan/trial/settings | `TenantRow` + `TenantRepository` + migration b1f2c3d4e5a6 | `test_repositories::test_tenant_*`, `test_admin_rules_audit::TestTenantStatus` | SP5 | ✅ |
 | S-6 | Provider super-admin (manage ALL tenants/users) | `provider_routes.py` + `PROVIDER_ADMIN` role | new | SP6 | ⬜ |
 | S-7 | Provider impersonation for support (audited) | provider route + audit | new | SP6 | ⬜ |
 | S-8 | Per-tenant credentials (BYO Splunk/model/MCP) | `TenantCredentialRow` (encrypted) + resolver | new | SP7 | ⬜ |

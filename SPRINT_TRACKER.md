@@ -43,11 +43,15 @@ definitions. `tests/test_detection_quality.py` is the regression gate: verified
 investigations, crown-jewel exfil triaged true-positive, benign query → 0
 detections. 159 BE tests / 98% cov. (THREAT_MODEL.md folded into SP12 docs.)
 
-### SP5 — Tenancy model deepened (foundation for all SaaS work) ⬜
-Extend `TenantRow`: `status` (active/suspended/trial), `plan` (free/pro/enterprise),
-`created_at`, `trial_ends_at`, `settings` JSON. New `TenantSettingsRow` for
-per-tenant config. Domain + repo + migration. Seed default tenant as `enterprise/active`.
-*DoD:* migration applies; tenant CRUD respects status; suspended tenant → 403 at auth.
+### SP5 — Tenancy model deepened (foundation for all SaaS work) ✅
+Extended `TenantRow` with `status` (active/suspended/trial), `plan`
+(free/pro/enterprise), `trial_ends_at`, `settings` JSON. `TenantRepository` gains
+create(status/plan/trial), list-all (provider use), set_status, set_plan,
+update_settings (merge). Migration `b1f2c3d4e5a6` adds the columns with server
+defaults; verified upgrade+downgrade clean on fresh DB. **Suspended-tenant
+enforcement**: blocked at login (403) AND on existing tokens via get_principal
+(403). 164 BE tests / 98% cov, ruff + mypy clean. Default tenant seeds as
+enterprise/active.
 
 ### SP6 — Provider super-admin plane (the "manage ALL tenants/users" page) ⬜
 New `PROVIDER_ADMIN` role above tenant admin (platform owner — you). New

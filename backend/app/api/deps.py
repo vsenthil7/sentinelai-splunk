@@ -127,6 +127,14 @@ async def get_principal(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked"
             )
+    # Block all access for suspended tenants (even with a previously valid token).
+    from app.db.repositories import TenantRepository
+
+    tenant = await TenantRepository(session).get(principal.tenant_id)
+    if tenant is not None and tenant.status == "suspended":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Tenant is suspended"
+        )
     return principal
 
 

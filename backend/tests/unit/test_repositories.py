@@ -88,6 +88,37 @@ class TestTenantUserRepo:
             await ur.create(t.id, "b", "pw")
             assert len(await ur.list(t.id)) == 2
 
+    async def test_tenant_saas_fields_defaults(self, sm):
+        async with sm() as s:
+            t = await TenantRepository(s).ensure("acme")
+            assert t.status == "active"
+            assert t.plan == "enterprise"
+            assert t.settings == {}
+
+    async def test_tenant_status_plan_settings(self, sm):
+        async with sm() as s:
+            r = TenantRepository(s)
+            t = await r.create("beta", status="trial", plan="free")
+            assert t.status == "trial" and t.plan == "free"
+            assert (await r.set_status(t.id, "suspended")).status == "suspended"
+            assert (await r.set_plan(t.id, "pro")).plan == "pro"
+            updated = await r.update_settings(t.id, {"theme": "dark"})
+            assert updated.settings["theme"] == "dark"
+            # merge keeps prior keys
+            updated2 = await r.update_settings(t.id, {"tz": "UTC"})
+            assert updated2.settings["theme"] == "dark" and updated2.settings["tz"] == "UTC"
+            # missing tenant
+            assert await r.set_status("missing", "active") is None
+            assert await r.set_plan("missing", "pro") is None
+            assert await r.update_settings("missing", {}) is None
+
+    async def test_tenant_list_all(self, sm):
+        async with sm() as s:
+            r = TenantRepository(s)
+            await r.create("t1")
+            await r.create("t2")
+            assert len(await r.list()) == 2
+
 
 class TestInvestigationRepo:
     async def test_save_get_list(self, sm):

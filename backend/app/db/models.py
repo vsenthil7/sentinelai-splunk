@@ -25,6 +25,16 @@ class TenantRow(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(200), unique=True)
+    # SaaS lifecycle: active | suspended | trial. Suspended tenants are blocked
+    # at authentication (see api/deps). Trial implies a time-boxed evaluation.
+    status: Mapped[str] = mapped_column(String(20), default="active", index=True)
+    # Commercial edition: free | pro | enterprise. Drives quotas (SP9).
+    plan: Mapped[str] = mapped_column(String(20), default="enterprise")
+    trial_ends_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Per-tenant non-secret settings (display prefs, notification routing, etc.).
+    settings: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

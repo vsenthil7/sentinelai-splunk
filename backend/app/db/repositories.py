@@ -32,14 +32,56 @@ class TenantRepository:
     async def get(self, tenant_id: str) -> TenantRow | None:
         return await self._session.get(TenantRow, tenant_id)
 
-    async def create(self, name: str) -> TenantRow:
-        tenant = TenantRow(name=name)
+    async def create(
+        self,
+        name: str,
+        *,
+        status: str = "active",
+        plan: str = "enterprise",
+        trial_ends_at: Any | None = None,
+    ) -> TenantRow:
+        tenant = TenantRow(
+            name=name, status=status, plan=plan, trial_ends_at=trial_ends_at, settings={}
+        )
         self._session.add(tenant)
         await self._session.flush()
         return tenant
 
     async def ensure(self, name: str) -> TenantRow:
         return await self.get_by_name(name) or await self.create(name)
+
+    async def list(self) -> builtins.list[TenantRow]:
+        """All tenants (provider-plane use only; not tenant-scoped)."""
+        result = await self._session.execute(select(TenantRow).order_by(TenantRow.created_at))
+        return list(result.scalars().all())
+
+    async def set_status(self, tenant_id: str, status: str) -> TenantRow | None:
+        tenant = await self.get(tenant_id)
+        if tenant is None:
+            return None
+        tenant.status = status
+        await self._session.flush()
+        return tenant
+
+    async def set_plan(self, tenant_id: str, plan: str) -> TenantRow | None:
+        tenant = await self.get(tenant_id)
+        if tenant is None:
+            return None
+        tenant.plan = plan
+        await self._session.flush()
+        return tenant
+
+    async def update_settings(
+        self, tenant_id: str, settings: dict[str, object]
+    ) -> TenantRow | None:
+        tenant = await self.get(tenant_id)
+        if tenant is None:
+            return None
+        merged = dict(tenant.settings or {})
+        merged.update(settings)
+        tenant.settings = merged
+        await self._session.flush()
+        return tenant
 
 
 class UserRepository:

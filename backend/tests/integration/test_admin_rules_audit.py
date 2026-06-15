@@ -198,3 +198,30 @@ class TestSystem:
     async def test_ai_models_requires_auth(self, client):
         resp = await client.get("/api/v1/ai/models")
         assert resp.status_code == 401
+
+
+class TestTenantStatus:
+    async def test_suspended_tenant_blocks_login(self, client, sessionmaker_, seeded):
+        from app.db.repositories import TenantRepository
+
+        async with sessionmaker_() as s:
+            await TenantRepository(s).set_status(seeded["tenant_id"], "suspended")
+            await s.commit()
+        resp = await client.post(
+            "/api/v1/auth/login",
+            json={"username": "analyst", "password": "sentinel-demo", "tenant": "default"},
+        )
+        assert resp.status_code == 403
+        assert "suspended" in resp.json()["detail"].lower()
+
+    async def test_suspended_tenant_blocks_existing_token(
+        self, client, auth, sessionmaker_, seeded
+    ):
+        # auth fixture already logged in; now suspend and existing token must fail.
+        from app.db.repositories import TenantRepository
+
+        async with sessionmaker_() as s:
+            await TenantRepository(s).set_status(seeded["tenant_id"], "suspended")
+            await s.commit()
+        resp = await client.get("/api/v1/investigations", headers=auth)
+        assert resp.status_code == 403
