@@ -26,8 +26,11 @@ services:
       SENTINEL_AI_BACKEND: ${AI_BACKEND:-mock}
       SENTINEL_CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
       WEB_CONCURRENCY: "4"
-    ports:
-      - "8000:8000"
+    # No host port: the backend is reached only via the frontend nginx proxy
+    # over the internal docker network. Publishing it would collide with other
+    # services on shared hosts. Use `docker compose exec` for direct access.
+    expose:
+      - "8000"
 
   frontend:
     build: ./frontend
