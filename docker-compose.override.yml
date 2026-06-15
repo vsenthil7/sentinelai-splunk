@@ -2,9 +2,12 @@
 # Follows the /srv/<project> + override-pins-host-ports convention used on the
 # atrio-demo box (one project per /srv folder, override pins unique host ports).
 #
-# Public surface = ONE port: 8096 -> frontend nginx, which proxies /api and
+# Verified free on the box (docker ps -a, 2026-06-15): 8093 (app) and 5435 (db).
+# In use: 8000/8025/8080/8081/8094/8095/8096/8787, 5432/5434, 1025, 7880-7882, 9000-9001.
+#
+# Public surface = ONE port: 8093 -> frontend nginx, which proxies /api and
 # /metrics to the backend over the internal docker network. The backend is
-# bound to 127.0.0.1:8196 (host-local only, for debugging) and is NOT public.
+# bound to 127.0.0.1:8193 (host-local only, for debugging) and is NOT public.
 # Postgres is exposed on 5435 for ops/inspection.
 #
 # Usage on the server:
@@ -19,9 +22,9 @@ services:
   backend:
     # Host-local only (not internet-facing); public traffic goes via the nginx proxy.
     ports:
-      - "127.0.0.1:8196:8000"
+      - "127.0.0.1:8193:8000"
     environment:
-      SENTINEL_CORS_ORIGINS: ${CORS_ORIGINS:-http://45.77.52.54:8096}
+      SENTINEL_CORS_ORIGINS: ${CORS_ORIGINS:-http://45.77.52.54:8093}
       # Splunk live/mcp wiring (only used when SPLUNK_BACKEND is live/mcp).
       SENTINEL_SPLUNK_HOST: ${SENTINEL_SPLUNK_HOST:-https://localhost:8089}
       SENTINEL_SPLUNK_TOKEN: ${SENTINEL_SPLUNK_TOKEN:-}
@@ -31,4 +34,4 @@ services:
 
   frontend:
     ports:
-      - "8096:80"
+      - "8093:80"
