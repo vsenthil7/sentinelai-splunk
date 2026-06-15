@@ -39,8 +39,8 @@ flowchart LR
     end
 
     subgraph External["Pluggable backends"]
-        Splunk[(Splunk REST / MCP)]
-        Model[(Hosted model)]
+        Splunk[(Splunk: mock / REST / MCP)]
+        Model[(Hosted model: Foundation-Sec / gpt-oss / Cisco DeepTS)]
         Conn[(EDR / IdP / Firewall)]
     end
 
@@ -87,8 +87,11 @@ sequenceDiagram
 
 ## Backend modules
 
-- **splunk/** — `SplunkClient` ABC; mock + live (REST/MCP) impls via factory.
+- **splunk/** — `SplunkClient` ABC; three impls via factory: mock (offline),
+  live (REST search export), and **mcp** (Splunk MCP Server, JSON-RPC tools/call).
 - **services/ai_model.py** — `AIModel` ABC; mock + live hosted-model impls.
+- **services/hosted_models.py** — Splunk hosted-model catalog + task routing
+  (Foundation-Sec → triage, gpt-oss → summary, Cisco DeepTS → time-series).
 - **services/enrichment.py** — threat intel, asset criticality, identity context.
 - **agents/** — detection (MITRE rule library + entity extraction), triage,
   response (gated actions), orchestrator.
